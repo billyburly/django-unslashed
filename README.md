@@ -1,4 +1,4 @@
-# django-unslashed 
+# django-unslashed
 
 [![Version](https://pypip.in/version/django-unslashed/badge.png)](https://pypi.python.org/pypi/django-unslashed/) [![Build Status](https://travis-ci.org/dghubble/django-unslashed.png)](https://travis-ci.org/dghubble/django-unslashed) [![Downloads](https://pypip.in/download/django-unslashed/badge.png)](https://pypi.python.org/pypi/django-unslashed/) [![License](https://pypip.in/license/django-unslashed/badge.png)](https://pypi.python.org/pypi/django-unslashed/)
 
@@ -42,6 +42,12 @@ REMOVE_SLASH = True
 If `REMOVE_SLASH` is False or unset, the RemoveSlashMiddleware has no effect.
 
 
+Set `UNSLASHED_USE_302_REDIRECT` to True if you want to use HttpRedirect instead of HttpPermanentRedirect,
+
+```python
+UNSLASHED_USE_302_REDIRECT = True
+```
+
 ## Rationale
 
 Web applications [should](http://googlewebmastercentral.blogspot.com/2010/04/to-slash-or-not-to-slash.html) have a URL structure which either:
@@ -68,10 +74,18 @@ Ran 6 tests in 0.071s
 
 OK
 Destroying test database for alias 'default'...
+
+$ python manage.py test unslashed --settings=testproject.settings_302_redirect
+Creating test database for alias 'default'...
+...
+----------------------------------------------------------------------
+Ran 6 tests in 0.071s
+
+OK
+Destroying test database for alias 'default'...
 ```
 
 
 ## License
 
 [MIT License](LICENSE)
-    

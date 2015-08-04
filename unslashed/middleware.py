@@ -1,8 +1,8 @@
 import re
-from django import http
 from django.conf import settings
 from django.core import urlresolvers
 from django.core.exceptions import ImproperlyConfigured
+from unslashed import UnslashedRedirect
 
 
 class RemoveSlashMiddleware(object):
@@ -38,7 +38,6 @@ class RemoveSlashMiddleware(object):
         # OR match / at the end of the string (no query string)
         trailing_slash_regexp = r'(\/(?=\?))|(\/$)'
         new_url = old_url
-
         if getattr(settings, 'APPEND_SLASH') and getattr(settings, 'REMOVE_SLASH'):
             raise ImproperlyConfigured("APPEND_SLASH and REMOVE_SLASH may not both be True.")
 
@@ -60,5 +59,4 @@ class RemoveSlashMiddleware(object):
         if new_url == old_url:
             # No redirects required.
             return
-        return http.HttpResponsePermanentRedirect(new_url)
-
+        return UnslashedRedirect(new_url)
