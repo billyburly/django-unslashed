@@ -1,7 +1,10 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponsePermanentRedirect as UnslashedRedirect
 from django.test import TestCase, Client
 from django.utils.http import urlquote
-from unslashed import UnslashedRedirect
+from django.conf import settings
+
+if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
+    from django.http import HttpResponseRedirect as UnslashedRedirect
 
 
 class RemoveSlashMiddlewareTest(TestCase):

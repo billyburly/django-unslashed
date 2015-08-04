@@ -2,7 +2,10 @@ import re
 from django.conf import settings
 from django.core import urlresolvers
 from django.core.exceptions import ImproperlyConfigured
-from unslashed import UnslashedRedirect
+from django.http import HttpResponsePermanentRedirect as UnslashedRedirect
+
+if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
+    from django.http import HttpResponseRedirect as UnslashedRedirect
 
 
 class RemoveSlashMiddleware(object):
