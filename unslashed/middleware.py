@@ -1,11 +1,12 @@
 import re
 from django.conf import settings
 from django.core import urlresolvers
-from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponsePermanentRedirect as UnslashedRedirect
 
 if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
     from django.http import HttpResponseRedirect as UnslashedRedirect
+
+trailing_slash_regexp = re.compile(r'(\/(?=\?))|(\/$)')
 
 
 class RemoveSlashMiddleware(object):
@@ -34,32 +35,42 @@ class RemoveSlashMiddleware(object):
     characters.
     """
 
-    def process_request(self, request):
-
-        old_url = request.build_absolute_uri()
-        # match any / followed by ? (query string present)
-        # OR match / at the end of the string (no query string)
-        trailing_slash_regexp = r'(\/(?=\?))|(\/$)'
-        new_url = old_url
-        if getattr(settings, 'APPEND_SLASH') and getattr(settings, 'REMOVE_SLASH'):
-            raise ImproperlyConfigured("APPEND_SLASH and REMOVE_SLASH may not both be True.")
-
-        # Remove slash if REMOVE_SLASH is set and the URL has a trailing slash
-        # and there is no pattern for the current path
-        if getattr(settings, 'REMOVE_SLASH', False) and re.search(trailing_slash_regexp, old_url):
+    def should_redirect_without_slash(self, request):
+        """
+        Return True if settings.APPEND_SLASH is True and appending a slash to
+        the request path turns an invalid path into a valid one.
+        """
+        if getattr(settings, 'REMOVE_SLASH', False) and trailing_slash_regexp.search(request.get_full_path()):
             urlconf = getattr(request, 'urlconf', None)
-            if (not urlresolvers.is_valid_path(request.path_info, urlconf)) and urlresolvers.is_valid_path(request.path_info[:-1], urlconf):
-                new_url = re.sub(trailing_slash_regexp, '', old_url)
-                if settings.DEBUG and request.method == 'POST':
-                    raise RuntimeError((""
-                    "You called this URL via POST, but the URL ends in a "
-                    "slash and you have REMOVE_SLASH set. Django can't "
-                    "redirect to the non-slash URL while maintaining POST "
-                    "data. Change your form to point to %s (without a "
-                    "trailing slash), or set REMOVE_SLASH=False in your "
-                    "Django settings.") % (new_url))
+            return (not urlresolvers.is_valid_path(request.path_info, urlconf) and urlresolvers.is_valid_path(
+                request.path_info[:-1], urlconf))
+        return False
 
-        if new_url == old_url:
-            # No redirects required.
-            return
-        return UnslashedRedirect(new_url)
+    def get_full_path_without_slash(self, request):
+        """
+        Return the full path of the request with a trailing slash appended.
+        Raise a RuntimeError if settings.DEBUG is True and request.method is
+        POST, PUT, or PATCH.
+        """
+        new_path = request.get_full_path()[:-1]
+        if settings.DEBUG and request.method in ('POST', 'PUT', 'PATCH'):
+            raise RuntimeError("You called this URL via %(method)s, but the URL doesn't end "
+                               "in a slash and you have APPEND_SLASH set. Django can't "
+                               "redirect to the slash URL while maintaining %(method)s data. "
+                               "Change your form to point to %(url)s (note the trailing "
+                               "slash), or set APPEND_SLASH=False in your Django settings." % {'method': request.method,
+                                   'url': request.get_host() + new_path,})
+        return new_path
+
+    def process_response(self, request, response):
+        """
+        redirects to the current URL without the trailing slash if settings.REMOVE_SLASH is True
+        and our current response's status_code would be a 404
+        """
+        # If the given URL is "Not Found", then check if we should redirect to
+        # a path without a slash appended.
+        if response.status_code == 404:
+            if self.should_redirect_without_slash(request):
+                return UnslashedRedirect(self.get_full_path_without_slash(request))
+
+        return response
