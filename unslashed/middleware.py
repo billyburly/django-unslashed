@@ -2,6 +2,7 @@ import re
 from django.conf import settings
 from django.core import urlresolvers
 from django.http import HttpResponsePermanentRedirect as UnslashedRedirect
+from django.utils import six
 
 if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
     from django.http import HttpResponseRedirect as UnslashedRedirect
@@ -52,7 +53,22 @@ class RemoveSlashMiddleware(object):
         Raise a RuntimeError if settings.DEBUG is True and request.method is
         POST, PUT, or PATCH.
         """
-        new_path = request.get_full_path()[:-1]
+        newurl = "%s://%s%s" % (
+            request.scheme,
+            request.get_host(), urlquote(request.path[:-1]))
+        if request.META.get('QUERY_STRING', ''):
+            if six.PY3:
+                newurl += '?' + request.META['QUERY_STRING']
+            else:
+                # `query_string` is a bytestring. Appending it to the unicode
+                # string `newurl` will fail if it isn't ASCII-only. This isn't
+                # allowed; only broken software generates such query strings.
+                # Better drop the invalid query string than crash (#15152).
+                try:
+                    newurl += '?' + request.META['QUERY_STRING'].decode()
+                except UnicodeDecodeError:
+                    pass
+                
         if settings.DEBUG and request.method in ('POST', 'PUT', 'PATCH'):
             raise RuntimeError("You called this URL via %(method)s, but the URL doesn't end "
                                "in a slash and you have APPEND_SLASH set. Django can't "
@@ -60,7 +76,7 @@ class RemoveSlashMiddleware(object):
                                "Change your form to point to %(url)s (note the trailing "
                                "slash), or set APPEND_SLASH=False in your Django settings." % {'method': request.method,
                                    'url': request.get_host() + new_path,})
-        return new_path
+        return newurl
 
     def process_response(self, request, response):
         """
