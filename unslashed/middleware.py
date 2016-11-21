@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core import urlresolvers
 from django.http import HttpResponsePermanentRedirect as UnslashedRedirect
 from django.utils import six
+from django.utils.http import urlquote
 
 if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
     from django.http import HttpResponseRedirect as UnslashedRedirect
