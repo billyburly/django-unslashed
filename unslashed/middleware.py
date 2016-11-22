@@ -123,7 +123,7 @@ class RemoveSlashMiddleware(object):
             whitelists = ['/admin']
             if hasattr(settings, 'UNSLASHED_WHITELIST_STARTSWITH'):
                 whitelists += settings.UNSLASHED_WHITELIST_STARTSWITH
-                if any(path.startswith(x) for x in whitelists):
+                if any(path.startswith(x) for x in whitelists) and not path.endswith('/'):
                     return UnslashedRedirect(self.get_full_path_with_slash(request))
             if self.should_redirect_without_slash(request):
                 return UnslashedRedirect(self.get_full_path_without_slash(request))
