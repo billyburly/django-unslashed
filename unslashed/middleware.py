@@ -69,7 +69,39 @@ class RemoveSlashMiddleware(object):
                     newurl += '?' + request.META['QUERY_STRING'].decode()
                 except UnicodeDecodeError:
                     pass
-                
+
+        if settings.DEBUG and request.method in ('POST', 'PUT', 'PATCH'):
+            raise RuntimeError("You called this URL via %(method)s, but the URL doesn't end "
+                               "in a slash and you have APPEND_SLASH set. Django can't "
+                               "redirect to the slash URL while maintaining %(method)s data. "
+                               "Change your form to point to %(url)s (note the trailing "
+                               "slash), or set APPEND_SLASH=False in your Django settings." % {'method': request.method,
+                                   'url': request.get_host() + new_path,})
+        return newurl
+
+    def get_full_path_with_slash(self, request):
+        """
+        Return the full path of the request with a trailing slash appended.
+        Raise a RuntimeError if settings.DEBUG is True and request.method is
+        POST, PUT, or PATCH.
+        """
+        newurl = "%s://%s%s" % (
+            request.scheme,
+            request.get_host(), urlquote(request.path))
+        newurl += '/'
+        if request.META.get('QUERY_STRING', ''):
+            if six.PY3:
+                newurl += '?' + request.META['QUERY_STRING']
+            else:
+                # `query_string` is a bytestring. Appending it to the unicode
+                # string `newurl` will fail if it isn't ASCII-only. This isn't
+                # allowed; only broken software generates such query strings.
+                # Better drop the invalid query string than crash (#15152).
+                try:
+                    newurl += '?' + request.META['QUERY_STRING'].decode()
+                except UnicodeDecodeError:
+                    pass
+
         if settings.DEBUG and request.method in ('POST', 'PUT', 'PATCH'):
             raise RuntimeError("You called this URL via %(method)s, but the URL doesn't end "
                                "in a slash and you have APPEND_SLASH set. Django can't "
@@ -87,6 +119,12 @@ class RemoveSlashMiddleware(object):
         # If the given URL is "Not Found", then check if we should redirect to
         # a path without a slash appended.
         if response.status_code == 404:
+            path = request.path
+            whitelists = ['/admin']
+            if hasattr(settings, 'UNSLASHED_WHITELIST_STARTSWITH'):
+                whitelists += settings.UNSLASHED_WHITELIST_STARTSWITH
+                if any(path.startswith(x) for x in whitelists):
+                    return UnslashedRedirect(self.get_full_path_with_slash(request))
             if self.should_redirect_without_slash(request):
                 return UnslashedRedirect(self.get_full_path_without_slash(request))
 
