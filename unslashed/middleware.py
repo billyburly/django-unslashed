@@ -54,6 +54,9 @@ class RemoveSlashMiddleware(object):
         Raise a RuntimeError if settings.DEBUG is True and request.method is
         POST, PUT, or PATCH.
         """
+
+        path = request.path
+
         newurl = "%s://%s%s" % (
             request.scheme,
             request.get_host(), urlquote(request.path[:-1]))
@@ -123,7 +126,9 @@ class RemoveSlashMiddleware(object):
             whitelists = ['/admin']
             if hasattr(settings, 'UNSLASHED_WHITELIST_STARTSWITH'):
                 whitelists += settings.UNSLASHED_WHITELIST_STARTSWITH
-            if any(path.startswith(x) for x in whitelists) and not path.endswith('/'):
+            if any(path.startswith(x) for x in whitelists) and path.endswith('/'):
+                return response
+            elif any(path.startswith(x) for x in whitelists) and not path.endswith('/'):
                 return UnslashedRedirect(self.get_full_path_with_slash(request))
             elif self.should_redirect_without_slash(request):
                 return UnslashedRedirect(self.get_full_path_without_slash(request))
