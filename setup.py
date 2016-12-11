@@ -51,7 +51,7 @@ setup(
 
     # Run-time package dependencies. These will be installed by pip when your
     # project is installed.
-    install_requires=['Django>=1.5'],
+    install_requires=['Django>=1.8'],
 
     # MANIFEST.in included entries should be included as package data and
     # installed into site-packages 
