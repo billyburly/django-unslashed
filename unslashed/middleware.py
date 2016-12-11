@@ -1,9 +1,10 @@
 import re
 from django.conf import settings
 from django.core import urlresolvers
+from django.core.exceptions import MiddlewareNotUsed
 from django.http import HttpResponsePermanentRedirect as UnslashedRedirect
-from django.utils import six
-from django.utils.http import urlquote
+from django.utils.deprecation import MiddlewareMixin
+from django.utils.encoding import iri_to_uri
 
 if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
     from django.http import HttpResponseRedirect as UnslashedRedirect
@@ -11,7 +12,7 @@ if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
 trailing_slash_regexp = re.compile(r'(\/(?=\?))|(\/$)')
 
 
-class RemoveSlashMiddleware(object):
+class RemoveSlashMiddleware(MiddlewareMixin):
     """
     This middleware provides the inverse of the APPEND_SLASH option built into
     django.middleware.common.CommonMiddleware. It should be placed just before
@@ -26,10 +27,10 @@ class RemoveSlashMiddleware(object):
     have a valid URL pattern for foo.com/bar/ but do have a valid pattern for
     foo.com/bar.
 
-    Using this middlware with REMOVE_SLASH set to False or without REMOVE_SLASH
-    set means it will do nothing.
+    Using this middleware with REMOVE_SLASH set to False or without
+    REMOVE_SLASH set means it will do nothing.
 
-    Orginally, based closely on Django's APPEND_SLASH CommonMiddleware
+    Originally, based closely on Django's APPEND_SLASH CommonMiddleware
     implementation at
     https://github.com/django/django/blob/master/django/middleware/common.py.
     It has been reworked to use regular expressions instead of deconstructing/
@@ -37,82 +38,53 @@ class RemoveSlashMiddleware(object):
     characters.
     """
 
+    def __init__(self, get_response=None):
+        if not getattr(settings, 'REMOVE_SLASH', False):
+            raise MiddlewareNotUsed()
+        super(RemoveSlashMiddleware, self).__init__(get_response)
+
     def should_redirect_without_slash(self, request):
         """
-        Return True if settings.APPEND_SLASH is True and appending a slash to
+        Return True if appending a slash to
         the request path turns an invalid path into a valid one.
         """
-        if getattr(settings, 'REMOVE_SLASH', False) and trailing_slash_regexp.search(request.get_full_path()):
+        if trailing_slash_regexp.search(request.get_full_path()):
             urlconf = getattr(request, 'urlconf', None)
-            return (not urlresolvers.is_valid_path(request.path_info, urlconf) and urlresolvers.is_valid_path(
-                request.path_info[:-1], urlconf))
+
+            return (
+                not urlresolvers.is_valid_path(request.path_info, urlconf) and
+                urlresolvers.is_valid_path(request.path_info[:-1], urlconf))
         return False
 
     def get_full_path_without_slash(self, request):
         """
-        Return the full path of the request with a trailing slash appended.
+        Return the full path of the request without a trailing slash appended.
+
         Raise a RuntimeError if settings.DEBUG is True and request.method is
         POST, PUT, or PATCH.
         """
-
         path = request.path
-
-        newurl = "%s://%s%s" % (
-            request.scheme,
-            request.get_host(), urlquote(request.path[:-1]))
-        if request.META.get('QUERY_STRING', ''):
-            if six.PY3:
-                newurl += '?' + request.META['QUERY_STRING']
-            else:
-                # `query_string` is a bytestring. Appending it to the unicode
-                # string `newurl` will fail if it isn't ASCII-only. This isn't
-                # allowed; only broken software generates such query strings.
-                # Better drop the invalid query string than crash (#15152).
-                try:
-                    newurl += '?' + request.META['QUERY_STRING'].decode()
-                except UnicodeDecodeError:
-                    pass
-
+        if path.endswith('/'):
+            path = path[:-1]
+        new_path = '{}{}'.format(
+            path,
+            ('?' + iri_to_uri(request.META.get('QUERY_STRING', '')))
+            if request.META.get('QUERY_STRING', '')
+            else ''
+        )
         if settings.DEBUG and request.method in ('POST', 'PUT', 'PATCH'):
-            raise RuntimeError("You called this URL via %(method)s, but the URL doesn't end "
-                               "in a slash and you have APPEND_SLASH set. Django can't "
-                               "redirect to the slash URL while maintaining %(method)s data. "
-                               "Change your form to point to %(url)s (note the trailing "
-                               "slash), or set APPEND_SLASH=False in your Django settings." % {'method': request.method,
-                                   'url': request.get_host() + new_path,})
-        return newurl
-
-    def get_full_path_with_slash(self, request):
-        """
-        Return the full path of the request with a trailing slash appended.
-        Raise a RuntimeError if settings.DEBUG is True and request.method is
-        POST, PUT, or PATCH.
-        """
-        newurl = "%s://%s%s" % (
-            request.scheme,
-            request.get_host(), urlquote(request.path))
-        newurl += '/'
-        if request.META.get('QUERY_STRING', ''):
-            if six.PY3:
-                newurl += '?' + request.META['QUERY_STRING']
-            else:
-                # `query_string` is a bytestring. Appending it to the unicode
-                # string `newurl` will fail if it isn't ASCII-only. This isn't
-                # allowed; only broken software generates such query strings.
-                # Better drop the invalid query string than crash (#15152).
-                try:
-                    newurl += '?' + request.META['QUERY_STRING'].decode()
-                except UnicodeDecodeError:
-                    pass
-
-        if settings.DEBUG and request.method in ('POST', 'PUT', 'PATCH'):
-            raise RuntimeError("You called this URL via %(method)s, but the URL doesn't end "
-                               "in a slash and you have APPEND_SLASH set. Django can't "
-                               "redirect to the slash URL while maintaining %(method)s data. "
-                               "Change your form to point to %(url)s (note the trailing "
-                               "slash), or set APPEND_SLASH=False in your Django settings." % {'method': request.method,
-                                   'url': request.get_host() + new_path,})
-        return newurl
+            raise RuntimeError(
+                "You called this URL via %(method)s, but the URL ends "
+                "in a slash and you have REMOVE_SLASH set. Django-unslashed "
+                "can't redirect to the slash URL while maintaining %(method)s "
+                "data. Change your form to point to %(url)s (note there is no"
+                "trailing slash), or set REMOVE_SLASH=False in your Django "
+                " settings." % {
+                    'method': request.method,
+                    'url': request.get_host() + new_path,
+                }
+            )
+        return new_path
 
     def process_response(self, request, response):
         """
@@ -123,14 +95,13 @@ class RemoveSlashMiddleware(object):
         # a path without a slash appended.
         if response.status_code == 404:
             path = request.path
-            whitelists = ['/admin']
-            if hasattr(settings, 'UNSLASHED_WHITELIST_STARTSWITH'):
-                whitelists += settings.UNSLASHED_WHITELIST_STARTSWITH
-            if any(path.startswith(x) for x in whitelists) and path.endswith('/'):
-                return response
-            elif any(path.startswith(x) for x in whitelists) and not path.endswith('/'):
-                return UnslashedRedirect(self.get_full_path_with_slash(request))
-            elif self.should_redirect_without_slash(request):
-                return UnslashedRedirect(self.get_full_path_without_slash(request))
+            whitelists = getattr(settings,
+                                 'UNSLASHED_WHITELIST_STARTSWITH',
+                                 ['/admin'])
+            if any(path.startswith(x) for x in whitelists):
+                return None
+            if self.should_redirect_without_slash(request):
+                return UnslashedRedirect(
+                    self.get_full_path_without_slash(request))
 
         return response
