@@ -3,7 +3,6 @@ from django.conf import settings
 from django.core import urlresolvers
 from django.core.exceptions import MiddlewareNotUsed
 from django.http import HttpResponsePermanentRedirect as UnslashedRedirect
-from django.utils.deprecation import MiddlewareMixin
 from django.utils.encoding import iri_to_uri
 
 if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
@@ -12,7 +11,7 @@ if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
 trailing_slash_regexp = re.compile(r'(\/(?=\?))|(\/$)')
 
 
-class RemoveSlashMiddleware(MiddlewareMixin):
+class RemoveSlashMiddleware(object):
     """
     This middleware provides the inverse of the APPEND_SLASH option built into
     django.middleware.common.CommonMiddleware. It should be placed just before
@@ -39,9 +38,20 @@ class RemoveSlashMiddleware(MiddlewareMixin):
     """
 
     def __init__(self, get_response=None):
+        self.get_response = get_response
         if not getattr(settings, 'REMOVE_SLASH', False):
             raise MiddlewareNotUsed()
-        super(RemoveSlashMiddleware, self).__init__(get_response)
+        super(RemoveSlashMiddleware, self).__init__()
+
+    def __call__(self, request):
+        response = None
+        if hasattr(self, 'process_request'):
+            response = self.process_request(request)
+        if not response:
+            response = self.get_response(request)
+        if hasattr(self, 'process_response'):
+            response = self.process_response(request, response)
+        return response
 
     def should_redirect_without_slash(self, request):
         """
