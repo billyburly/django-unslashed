@@ -3,6 +3,12 @@ Changelog
 
 Notable changes between releases.
 
+0.4.0 (2016-12-12)
+------------------
+
+* Update for Django 1.10
+* Drop support for Python 2.6 and Django 1.6 and 1.7
+
 0.3 (2014-12-18)
 ----------------
 
