@@ -1,0 +1,6 @@
+[paths]
+source =
+    unslashed/middleware.py
+[report]
+include =
+    unslashed/middleware.py

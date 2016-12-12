@@ -1,6 +1,7 @@
 # django-unslashed
 
 [![Build Status](https://travis-ci.org/frnhr/django-unslashed.png)](https://travis-ci.org/frnhr/django-unslashed)
+[![codecov](https://codecov.io/gh/frnhr/django-unslashed/branch/master/graph/badge.svg)](https://codecov.io/gh/frnhr/django-unslashed)
 
 This middleware provides the inverse of the Django CommonMiddleware `APPEND_SLASH` feature. It can automatically remove trailing URL slashes and 301 redirect to the non-slash-terminated URL. This behavior is performed if the initial URL ends in a slash and is invalid, removing the trailing slash produces a valid URL, and `REMOVE_SLASH` is set to True. Otherwise there is no effect.
 

@@ -19,3 +19,5 @@ install:
   - pip install -e .
 script:
   - python manage.py test unslashed
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

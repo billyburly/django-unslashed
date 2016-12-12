@@ -2,16 +2,18 @@ import re
 from django.conf import settings
 from django.core import urlresolvers
 from django.core.exceptions import MiddlewareNotUsed
-from django.http import HttpResponsePermanentRedirect as UnslashedRedirect
+from django.http import HttpResponsePermanentRedirect, HttpResponseRedirect
 from django.utils.encoding import iri_to_uri
+try:
+    from django.utils.deprecation import MiddlewareMixin
+except ImportError:  # pragma: no cover
+    MiddlewareMixin = object  # Django<1.10
 
-if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
-    from django.http import HttpResponseRedirect as UnslashedRedirect
 
 trailing_slash_regexp = re.compile(r'(\/(?=\?))|(\/$)')
 
 
-class RemoveSlashMiddleware(object):
+class RemoveSlashMiddleware(MiddlewareMixin):
     """
     This middleware provides the inverse of the APPEND_SLASH option built into
     django.middleware.common.CommonMiddleware. It should be placed just before
@@ -37,21 +39,14 @@ class RemoveSlashMiddleware(object):
     characters.
     """
 
-    def __init__(self, get_response=None):
-        self.get_response = get_response
+    def __init__(self, *args, **kwargs):
         if not getattr(settings, 'REMOVE_SLASH', False):
             raise MiddlewareNotUsed()
-        super(RemoveSlashMiddleware, self).__init__()
+        self.response_class = HttpResponsePermanentRedirect
+        if getattr(settings, 'UNSLASHED_USE_302_REDIRECT', None):
+            self.response_class = HttpResponseRedirect
+        super(RemoveSlashMiddleware, self).__init__(*args, **kwargs)
 
-    def __call__(self, request):
-        response = None
-        if hasattr(self, 'process_request'):
-            response = self.process_request(request)
-        if not response:
-            response = self.get_response(request)
-        if hasattr(self, 'process_response'):
-            response = self.process_response(request, response)
-        return response
 
     def should_redirect_without_slash(self, request):
         """
@@ -109,9 +104,8 @@ class RemoveSlashMiddleware(object):
                                  'UNSLASHED_WHITELIST_STARTSWITH',
                                  ['/admin'])
             if any(path.startswith(x) for x in whitelists):
-                return None
+                return response
             if self.should_redirect_without_slash(request):
-                return UnslashedRedirect(
+                return self.response_class(
                     self.get_full_path_without_slash(request))
-
         return response
