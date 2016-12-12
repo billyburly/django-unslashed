@@ -1,12 +1,15 @@
 import os
 from setuptools import setup
 from unslashed import __version__
-import pypandoc
 
 here = os.path.abspath(os.path.dirname(__file__))
 
 # Get the long description from the relevant file
-long_description = pypandoc.convert('README.md', 'rst')
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+except ImportError:
+    long_description = ''
 
 setup(
     name='tocka-django-unslashed',
