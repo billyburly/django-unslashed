@@ -1,11 +1,18 @@
 # django-unslashed
 
-[![Build Status](https://travis-ci.org/frnhr/django-unslashed.png)](https://travis-ci.org/frnhr/django-unslashed)
+[![CircleCI](https://circleci.com/gh/frnhr/django-unslashed/tree/master.svg?style=shield)](https://circleci.com/gh/frnhr/django-unslashed/tree/master)
 [![codecov](https://codecov.io/gh/frnhr/django-unslashed/branch/master/graph/badge.svg)](https://codecov.io/gh/frnhr/django-unslashed)
 
 This middleware provides the inverse of the Django CommonMiddleware `APPEND_SLASH` feature. It can automatically remove trailing URL slashes and 301 redirect to the non-slash-terminated URL. This behavior is performed if the initial URL ends in a slash and is invalid, removing the trailing slash produces a valid URL, and `REMOVE_SLASH` is set to True. Otherwise there is no effect.
 
 For example, foo.com/bar/ will be redirected to foo.com/bar if you don't have a valid URL pattern for foo.com/bar/ but do have a valid pattern for foo.com/bar and `REMOVE_SLASH=True`.
+
+
+## Fork info
+
+This is a fork from https://github.com/harshvb7/django-unslashed.
+
+Updated for Django 1.10, compatible down to 1.8, and Python 2.7, 3.3-3.5.
 
 
 ## Install
@@ -64,26 +71,34 @@ Based closely on Django's APPEND_SLASH CommonMiddleware [implementation](https:/
 
 ## Testing
 
+### Tox
+
+This will run tests on multiple versions of Python and Django, as defined in `tox.ini`.
+
 ```bash
-$ git clone https://github.com/dghubble/django-unslashed.git
+$ git clone https://github.com/frnhr/django-unslashed.git
 $ cd django-unslashed
-$ python manage.py test unslashed
-Creating test database for alias 'default'...
+$ pip install -r requirements-dev.txt
+$ tox
 ...
-----------------------------------------------------------------------
-Ran 6 tests in 0.071s
-
-OK
-Destroying test database for alias 'default'...
-
-$ python manage.py test unslashed --settings=testproject.settings_302_redirect
-Creating test database for alias 'default'...
 ...
-----------------------------------------------------------------------
-Ran 6 tests in 0.071s
-
-OK
-Destroying test database for alias 'default'...
+...
+________________________________________________________________________________________________________ summary _________________________________________________________________________________________________________
+  django_master-py35: commands succeeded
+  django_master-py34: commands succeeded
+  django_master-py27: commands succeeded
+  django110-py35: commands succeeded
+  django110-py34: commands succeeded
+  django110-py27: commands succeeded
+  django19-py35: commands succeeded
+  django19-py34: commands succeeded
+  django19-py27: commands succeeded
+  django18-py35: commands succeeded
+  django18-py34: commands succeeded
+  django18-py33: commands succeeded
+  django18-py27: commands succeeded
+  lint: commands succeeded
+  congratulations :)
 ```
 
 

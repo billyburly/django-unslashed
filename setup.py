@@ -1,16 +1,15 @@
 import os
-import codecs
 from setuptools import setup
 from unslashed import __version__
+import pypandoc
 
 here = os.path.abspath(os.path.dirname(__file__))
 
 # Get the long description from the relevant file
-with codecs.open(os.path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
-    long_description = f.read()
+long_description = pypandoc.convert('README.md', 'rst')
 
 setup(
-    name='django-unslashed',
+    name='tocka-django-unslashed',
 
     # Versions should comply with PEP440. For single-sourced versioning, see
     # https://packaging.python.org/en/latest/development.html#single-sourcing-the-version
@@ -20,11 +19,11 @@ setup(
     long_description=long_description,
 
     # The project URL
-    url = 'https://github.com/dghubble/django-unslashed',
+    url = 'https://github.com/frnhr/django-unslashed',
 
     # Author details
-    author='Dalton Hubble',
-    author_email='dghubble@gmail.com',
+    author='Fran Hrzenjak',
+    author_email='fran.hrzenjak@gmail.com',
 
     # Choose your license
     license='MIT License',

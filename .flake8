@@ -1,0 +1,4 @@
+[flake8]
+exclude =
+    .git__pycache__,docs/source/conf.py,old,build,disz,
+    */tests.py

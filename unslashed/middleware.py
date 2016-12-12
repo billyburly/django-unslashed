@@ -47,7 +47,6 @@ class RemoveSlashMiddleware(MiddlewareMixin):
             self.response_class = HttpResponseRedirect
         super(RemoveSlashMiddleware, self).__init__(*args, **kwargs)
 
-
     def should_redirect_without_slash(self, request):
         """
         Return True if appending a slash to
@@ -93,8 +92,9 @@ class RemoveSlashMiddleware(MiddlewareMixin):
 
     def process_response(self, request, response):
         """
-        redirects to the current URL without the trailing slash if settings.REMOVE_SLASH is True
-        and our current response's status_code would be a 404
+        Redirects to the current URL without the trailing slash if
+        settings.REMOVE_SLASH is True and our current response's
+        status_code would be a 404
         """
         # If the given URL is "Not Found", then check if we should redirect to
         # a path without a slash appended.

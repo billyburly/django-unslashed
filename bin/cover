@@ -1,0 +1,5 @@
+#!/bin/bash
+export PYTHONPATH="$PWD:$PWD/stdnumfield/testproject:$PYTHONPATH"
+coverage erase
+coverage run manage.py test
+coverage report
