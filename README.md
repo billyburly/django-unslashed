@@ -10,9 +10,12 @@ For example, foo.com/bar/ will be redirected to foo.com/bar if you don't have a 
 
 ## Fork info
 
-This is a fork from https://github.com/harshvb7/django-unslashed.
+This is a fork from https://github.com/harshvb7/django-unslashed, which is in turn a fork of https://github.com/dghubble/django-unslashed.
 
-Updated for Django 1.10, compatible down to 1.8, and Python 2.7, 3.3-3.5.
+Changes to this fork:
+    * updated for Django 1.10, compatible down to 1.8, and Python 2.7, 3.3-3.5.
+    * PyPI package name with prefix `tocka-`
+    * Added CircleCI and Codecov, removed TravisCI    
 
 
 ## Install
@@ -20,7 +23,7 @@ Updated for Django 1.10, compatible down to 1.8, and Python 2.7, 3.3-3.5.
 To install `django-unslashed`,
 
 ```
-pip install django-unslashed
+pip install tocka-django-unslashed
 ```
 
 If you're using a `requirements.txt` file, add `django-unslashed>=0.3.0` to it.
