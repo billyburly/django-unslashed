@@ -1,6 +1,6 @@
 import re
 from django.conf import settings
-from django.core import urlresolvers
+import django.urls
 from django.core.exceptions import MiddlewareNotUsed
 from django.http import HttpResponsePermanentRedirect, HttpResponseRedirect
 from django.utils.encoding import iri_to_uri
