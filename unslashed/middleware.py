@@ -1,6 +1,6 @@
 import re
 from django.conf import settings
-import django.urls
+from django.urls import is_valid_path
 from django.core.exceptions import MiddlewareNotUsed
 from django.http import HttpResponsePermanentRedirect, HttpResponseRedirect
 from django.utils.encoding import iri_to_uri
@@ -56,8 +56,8 @@ class RemoveSlashMiddleware(MiddlewareMixin):
             urlconf = getattr(request, 'urlconf', None)
 
             return (
-                not urlresolvers.is_valid_path(request.path_info, urlconf) and
-                urlresolvers.is_valid_path(request.path_info[:-1], urlconf))
+                not is_valid_path(request.path_info, urlconf) and
+                is_valid_path(request.path_info[:-1], urlconf))
         return False
 
     def get_full_path_without_slash(self, request):
